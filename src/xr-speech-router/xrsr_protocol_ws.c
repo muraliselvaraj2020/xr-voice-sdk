@@ -1544,8 +1544,8 @@ noPollPtr xrsr_ws_ssl_ctx_creator(noPollCtx * ctx, noPollConn * conn, noPollConn
 
     ENGINE *e = NULL;
     const char *pkcs11_uri = "pkcs11:id=%2c;type=private";
-    //EVP_PKEY *pkey = NULL;
-
+    #define PKCS11_MODULE_PATH "/usr/lib/libckteec.so"
+    //EVP_PKEY *pkey = NULL;       
     // Load the PKCS#11 engine
     ENGINE_load_dynamic();
     e = ENGINE_by_id("pkcs11");
@@ -1553,7 +1553,13 @@ noPollPtr xrsr_ws_ssl_ctx_creator(noPollCtx * ctx, noPollConn * conn, noPollConn
         fprintf(stderr, "Failed to get PKCS#11 engine\n");
         //return NULL;
     }
-
+     // Set the PKCS#11 module path
+    if (!ENGINE_ctrl_cmd_string(e, "MODULE_PATH", PKCS11_MODULE_PATH, 0)) {
+       fprintf(stderr, "Error setting PKCS#11 module path\n");
+      // ERR_print_errors_fp(stderr);
+      // ENGINE_free(e);
+    }
+         
     if (!ENGINE_init(e)) {
         fprintf(stderr, "Failed to initialize PKCS#11 engine\n");
         ENGINE_free(e);
