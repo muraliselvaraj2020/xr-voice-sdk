@@ -1537,10 +1537,10 @@ noPollPtr xrsr_ws_ssl_ctx_creator(noPollCtx * ctx, noPollConn * conn, noPollConn
             break;
          }
 
-         if(1 != PKCS12_parse(p12_cert, cert_p12->passphrase, &pkey, &x509_cert, &additional_certs)) {
+        /* if(1 != PKCS12_parse(p12_cert, cert_p12->passphrase, &pkey, &x509_cert, &additional_certs)) {
             XLOGD_ERROR("unable to parse P12 certificate <%s>", cert_p12->filename);
             break;
-         }
+         } */
 
     ENGINE *e = NULL;
     const char *pkcs11_uri = "pkcs11:id=%2c;type=private";
@@ -1572,6 +1572,21 @@ noPollPtr xrsr_ws_ssl_ctx_creator(noPollCtx * ctx, noPollConn * conn, noPollConn
         fprintf(stderr, "Failed to load private key from PKCS#11 URI: %s\n", pkcs11_uri);
     }
 
+ struct {
+    const char* cert_id;
+    X509* cert;
+} certparams = { 0 };
+  certparams.cert_id = "pkcs11:id=%2c;type=cert";
+        if (!ENGINE_ctrl_cmd(e, "LOAD_CERT_CTRL", 0, &certparams, NULL, 1)) {
+            fprintf(stderr, "Could not get certificate \n");
+        }
+       if(x509_cert != NULL )
+       {
+          if(*x509_cert != NULL)
+             X509_free(*x509_cert);
+          *x509_cert = certparams.cert;
+        } 
+         
     ENGINE_finish(e);
     ENGINE_free(e);
 
