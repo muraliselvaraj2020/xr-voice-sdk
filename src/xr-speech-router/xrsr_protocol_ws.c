@@ -27,6 +27,10 @@
 #include <openssl/ocsp.h>
 #include "xrsr_private.h"
 #include "xrsr_protocol_ws_sm.h"
+#include <openssl/engine.h>
+#include <openssl/evp.h>
+#include <openssl/x509.h>
+#include <stdio.h>
 
 #define XRSR_WS_CIPHER_LIST "AES256-SHA256:AES128-GCM-SHA256:AES128-SHA256"
 
@@ -1537,6 +1541,33 @@ noPollPtr xrsr_ws_ssl_ctx_creator(noPollCtx * ctx, noPollConn * conn, noPollConn
             XLOGD_ERROR("unable to parse P12 certificate <%s>", cert_p12->filename);
             break;
          }
+
+    ENGINE *e = NULL;
+    const char *pkcs11_uri = "pkcs11:id=%2c;type=private";
+    //EVP_PKEY *pkey = NULL;
+
+    // Load the PKCS#11 engine
+    ENGINE_load_dynamic();
+    e = ENGINE_by_id("pkcs11");
+    if (!e) {
+        fprintf(stderr, "Failed to get PKCS#11 engine\n");
+        //return NULL;
+    }
+
+    if (!ENGINE_init(e)) {
+        fprintf(stderr, "Failed to initialize PKCS#11 engine\n");
+        ENGINE_free(e);
+        //return NULL;
+    }
+
+    // Set the PKCS#11 URI as the key identifier
+    pkey = ENGINE_load_private_key(e, pkcs11_uri, NULL, NULL);
+    if (!pkey) {
+        fprintf(stderr, "Failed to load private key from PKCS#11 URI: %s\n", pkcs11_uri);
+    }
+
+    ENGINE_finish(e);
+    ENGINE_free(e);
 
          if(!xrsr_ws_ssl_cert_set(ssl_ctx, x509_cert, pkey, additional_certs)) {
             XLOGD_ERROR("Failed to set cert and key");
